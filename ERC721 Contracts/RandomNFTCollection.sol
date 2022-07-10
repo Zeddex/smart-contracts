@@ -12,10 +12,11 @@ contract RandomNFTCollection is ERC721, Ownable {
     using Counters for Counters.Counter;
 
     string baseURI = "ipfs://ipfsAddress/";
-    uint private _maxSupply = 10;
+    uint public maxSupply = 10;
     uint256 public cost = 0.1 ether;
-    uint256 public currentSupply = 0;
+
     Counters.Counter private _tokenCount;
+    Counters.Counter private _currentSupply;
     mapping(uint256 => uint256) private tokenMatrix;
 
     constructor() ERC721("Random Collection", "RND") {}
@@ -43,8 +44,8 @@ contract RandomNFTCollection is ERC721, Ownable {
             : "";
     }
 
-    function totalSupply() public view virtual returns (uint256) {
-        return _maxSupply;
+    function totalSupply() public view returns (uint256) {
+        return _currentSupply.current();
     }
 
     function tokenCount() private view returns (uint256) {
@@ -52,7 +53,7 @@ contract RandomNFTCollection is ERC721, Ownable {
     }
 
     function availableTokenCount() public view returns (uint256) {
-        return totalSupply() - tokenCount();
+        return maxSupply - tokenCount();
     }
 
     function nextToken() private returns (uint256) {
@@ -64,7 +65,7 @@ contract RandomNFTCollection is ERC721, Ownable {
     }
 
     function nextTokenRandom() private ensureAvailability returns (uint256) {
-        uint256 maxIndex = totalSupply() - tokenCount();
+        uint256 maxIndex = maxSupply - tokenCount();
         uint256 random = uint256(keccak256(
             abi.encodePacked(
                 msg.sender,
@@ -106,7 +107,7 @@ contract RandomNFTCollection is ERC721, Ownable {
     }
 
     function mint() public payable {
-        require(tokenCount() + 1 <= totalSupply(), "You cannot mint more than maximum supply");
+        require(tokenCount() + 1 <= maxSupply, "You cannot mint more than maximum supply");
         require(availableTokenCount() - 1 >= 0, "You cannot mint more than available token count"); 
         require( tx.origin == msg.sender, "Cannot mint through a custom contract");
 
@@ -118,18 +119,18 @@ contract RandomNFTCollection is ERC721, Ownable {
 
         _safeMint(msg.sender, tokenId);
 
-        currentSupply++;
+        _currentSupply.increment();
     }
 
     function mintToAddress(address to) public onlyOwner {
-        require(tokenCount() + 1 <= totalSupply(), "You cannot mint more than maximum supply");
+        require(tokenCount() + 1 <= maxSupply, "You cannot mint more than maximum supply");
         require(availableTokenCount() - 1 >= 0, "You cannot mint more than available token count"); 
       
         uint256 tokenId = nextTokenRandom();
 
         _safeMint(to, tokenId);
 
-        currentSupply++;
+        _currentSupply.increment();
     }
     
     function setCost(uint256 _newCost) public onlyOwner {
