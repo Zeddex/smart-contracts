@@ -11,19 +11,36 @@ contract RandomNFTCollection is ERC721, Ownable {
     using Strings for uint256;
     using Counters for Counters.Counter;
 
-    string baseURI = "ipfs://ipfsAddress/";
-    uint public maxSupply = 10;
-    uint256 public cost = 0.1 ether;
-
     Counters.Counter private _tokenCount;
     Counters.Counter private _currentSupply;
     mapping(uint256 => uint256) private tokenMatrix;
 
-    constructor() ERC721("Random Collection", "RND") {}
+    string baseURI = "ipfs://ipfsAddress/";
+    uint public maxSupply = 10;
+    uint256 public cost = 0.1 ether;
+    uint256 private premint = 3;
+
+    constructor() ERC721("Random Collection", "RND") {
+        // mint some tokens to the owner on deployment
+        for (uint i = 1; i <= premint; i++) {
+            _safeMint(msg.sender, i);
+
+            // update random
+            uint256 maxIndex = maxSupply - tokenCount();
+            tokenMatrix[i] = maxIndex - 1;
+
+            _tokenCount.increment();
+            currentSupplyIncrement();
+        }
+    }
 
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
       }
+
+    function totalSupply() public view returns (uint256) {
+        return _currentSupply.current();
+    }
 
     function tokenURI(uint256 tokenId)
       public
@@ -44,24 +61,16 @@ contract RandomNFTCollection is ERC721, Ownable {
             : "";
     }
 
-    function totalSupply() public view returns (uint256) {
-        return _currentSupply.current();
-    }
-
     function tokenCount() private view returns (uint256) {
         return _tokenCount.current();
     }
 
-    function availableTokenCount() public view returns (uint256) {
-        return maxSupply - tokenCount();
+    function currentSupplyIncrement() private {
+        _currentSupply.increment();
     }
 
-    function nextToken() private returns (uint256) {
-        uint256 token = _tokenCount.current();
-
-        _tokenCount.increment();
-
-        return token;
+    function availableTokenCount() public view returns (uint256) {
+        return maxSupply - tokenCount();
     }
 
     function nextTokenRandom() private ensureAvailability returns (uint256) {
@@ -96,14 +105,9 @@ contract RandomNFTCollection is ERC721, Ownable {
         }
 
         // Increment counts
-        nextToken();
+        _tokenCount.increment();
 
         return value + 1;
-    }
-
-    modifier ensureAvailability() {
-        require(availableTokenCount() > 0, "No more tokens available");
-        _;
     }
 
     function mint() public payable {
@@ -119,7 +123,7 @@ contract RandomNFTCollection is ERC721, Ownable {
 
         _safeMint(msg.sender, tokenId);
 
-        _currentSupply.increment();
+        currentSupplyIncrement();
     }
 
     function mintToAddress(address to) public onlyOwner {
@@ -130,7 +134,7 @@ contract RandomNFTCollection is ERC721, Ownable {
 
         _safeMint(to, tokenId);
 
-        _currentSupply.increment();
+       currentSupplyIncrement();
     }
     
     function setCost(uint256 _newCost) public onlyOwner {
@@ -140,5 +144,10 @@ contract RandomNFTCollection is ERC721, Ownable {
     function withdraw() public payable onlyOwner {
         (bool sent, ) = payable(owner()).call{value: address(this).balance}("");
         require(sent, "Transfer failed");
+    }
+
+    modifier ensureAvailability() {
+        require(availableTokenCount() > 0, "No more tokens available");
+        _;
     }
 }
