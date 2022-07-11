@@ -19,6 +19,7 @@ contract RandomNFTCollection is ERC721, Ownable {
     uint public maxSupply = 10;
     uint256 public cost = 0.1 ether;
     uint256 private premint = 3;
+    uint256 private startRndCount = premint + 1;
 
     constructor() ERC721("Random Collection", "RND") {
         // mint some tokens to the owner on deployment
@@ -107,10 +108,10 @@ contract RandomNFTCollection is ERC721, Ownable {
         // Increment counts
         _tokenCount.increment();
 
-        return value + 1;
+        return value + startRndCount;
     }
 
-    function mint() public payable {
+    function mint() public payable mintRequirements {
         require(tokenCount() + 1 <= maxSupply, "You cannot mint more than maximum supply");
         require(availableTokenCount() - 1 >= 0, "You cannot mint more than available token count"); 
         require( tx.origin == msg.sender, "Cannot mint through a custom contract");
@@ -126,7 +127,7 @@ contract RandomNFTCollection is ERC721, Ownable {
         currentSupplyIncrement();
     }
 
-    function mintToAddress(address to) public onlyOwner {
+    function mintToAddress(address to) public onlyOwner mintRequirements {
         require(tokenCount() + 1 <= maxSupply, "You cannot mint more than maximum supply");
         require(availableTokenCount() - 1 >= 0, "You cannot mint more than available token count"); 
       
@@ -148,6 +149,13 @@ contract RandomNFTCollection is ERC721, Ownable {
 
     modifier ensureAvailability() {
         require(availableTokenCount() > 0, "No more tokens available");
+        _;
+    }
+
+    modifier mintRequirements() {
+        require(tokenCount() + 1 <= maxSupply, "You cannot mint more than maximum supply");
+        require(availableTokenCount() - 1 >= 0, "You cannot mint more than available token count"); 
+        require( tx.origin == msg.sender, "Cannot mint through a custom contract");
         _;
     }
 }
